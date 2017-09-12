@@ -80,6 +80,10 @@
       <property name="forbiddenClassesRegexpProtected" value=""/>
       <property name="forbiddenClassesRegexpPublic" value=""/>
     </module>
+    <module name="com.github.sevntu.checkstyle.checks.coding.ForbidCertainMethods">
+      <property name="file" value="${checkstyle.forbidden_methods.file}"/>
+      <property name="optional" value="true"/>
+    </module>
     <module name="com.github.sevntu.checkstyle.checks.coding.OverridableMethodInConstructor">
       <property name="checkCloneMethod" value="false"/>
       <property name="checkReadObjectMethod" value="false"/>

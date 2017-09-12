@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Add the following to any file that is to be validated against this DTD:
+
+<!DOCTYPE ForbiddenMethods PUBLIC
+    "-//Puppy Crawl//DTD Forbidden Methods 1.0//EN"
+    "http://checkstyle.sourceforge.net/dtds/forbidden_methods_1_0.dtd">
+-->
+
+<!ELEMENT ForbiddenMethods (ForbiddenMethod*)>
+
+<!ELEMENT ForbiddenMethod EMPTY>
+<!ATTLIST ForbiddenMethod methodName CDATA #REQUIRED
+                          argCount CDATA #IMPLIED>

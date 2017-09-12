@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE ForbiddenMethods SYSTEM
+        "../../../../../../../../src/main/resources/com/github/sevntu/checkstyle/checks/coding/forbidden_methods_1_0.dtd">
+
+<ForbiddenMethods>
+    <ForbiddenMethod methodName="exit"/>
+    <ForbiddenMethod methodName="exit2" argCount=""/>
+    <ForbiddenMethod methodName="assert(True|False)" argCount="1"/>
+    <ForbiddenMethod methodName="ForbiddenConstructor" argCount="1"/>
+</ForbiddenMethods>
