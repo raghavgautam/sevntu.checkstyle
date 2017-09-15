@@ -167,6 +167,10 @@ public class ForbidCertainMethodsCheck extends AbstractCheck {
             // constructor
             case TokenTypes.LITERAL_NEW: {
                 final DetailAST constructor = ast.getFirstChild();
+                // case for java8 expression: File::new
+                if (constructor == null) {
+                    break;
+                }
                 final String constructorName = constructor.getText();
                 final DetailAST arguments = ast.findFirstToken(TokenTypes.ELIST);
                 // case for expression: int int[4]

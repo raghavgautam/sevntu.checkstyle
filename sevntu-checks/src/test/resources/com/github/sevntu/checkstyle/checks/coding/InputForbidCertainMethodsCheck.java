@@ -6,6 +6,9 @@ package com.github.sevntu.checkstyle.checks.coding;
 
 import org.junit.Assert;
 
+import java.io.File;
+import java.util.Arrays;
+
 /**
  * Test case for detecting usage of forbidden methods & constructors.
  * @author Raghav Kumar Gautam
@@ -30,7 +33,8 @@ class InputForbidCertainMethodsCheck
         //method call that does not need "." in it
         method("");
         // new usage that does not invoke constructor
-        int[] nums = new int[4];
+        String[] strs = new String[4];
+        Arrays.stream(strs).map(File::new).count();
     }
 
     private class ForbiddenConstructor {

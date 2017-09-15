@@ -46,10 +46,10 @@ public class ForbidCertainMethodsCheckTest extends BaseCheckTestSupport {
         checkConfig.addAttribute("optional", optional);
         checkConfig.addAttribute("file", "file://" + forbiddenMethodConfigFile);
         final String[] expected = {
-            "19:20: " + getCheckMessage(MSG_KEY_WITHOUT_ARG, "exit", "exit"),
-            "20:53: " + getCheckMessage(MSG_KEY_WITH_ARG, "ForbiddenConstructor", "ForbiddenConstructor", 1, "1"),
-            "27:26: " + getCheckMessage(MSG_KEY_WITH_ARG, "assertTrue", "assert(True|False)", 1, "1"),
-            "29:31: " + getCheckMessage(MSG_KEY_WITHOUT_ARG, "exit2", "exit2"),
+            "22:20: " + getCheckMessage(MSG_KEY_WITHOUT_ARG, "exit", "exit"),
+            "23:53: " + getCheckMessage(MSG_KEY_WITH_ARG, "ForbiddenConstructor", "ForbiddenConstructor", 1, "1"),
+            "30:26: " + getCheckMessage(MSG_KEY_WITH_ARG, "assertTrue", "assert(True|False)", 1, "1"),
+            "32:31: " + getCheckMessage(MSG_KEY_WITHOUT_ARG, "exit2", "exit2"),
         };
         verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), expected);
     }
