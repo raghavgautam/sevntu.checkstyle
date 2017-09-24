@@ -81,6 +81,7 @@
       <property name="forbiddenClassesRegexpPublic" value=""/>
     </module>
     <module name="com.github.sevntu.checkstyle.checks.coding.ForbidCertainMethods">
+      <property name="includeConstructor" value="false"/>
       <module name="ExitCheck">
         <property name="argumentCount" value=""/>
         <property name="methodName" value="exit"/>

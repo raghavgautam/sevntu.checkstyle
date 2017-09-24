@@ -183,11 +183,8 @@
       <alternative-name internal-name="com.github.sevntu.checkstyle.checks.coding.ForbidCertainMethodsCheck"/>
       <description>%ForbidCertainMethodsCheck.desc</description>
 
-      <property-metadata name="file" datatype="String" default-value="">
-        <description>%ForbidCertainMethodsCheck.file</description>
-      </property-metadata>
-      <property-metadata name="optional" datatype="Boolean" default-value="true">
-        <description>%ForbidCertainMethodsCheck.optional</description>
+      <property-metadata name="includeConstructor" datatype="Boolean" default-value="false">
+        <description>%ForbidCertainMethodsCheck.includeConstructor</description>
       </property-metadata>
 
       <message-key key="forbid.certain.methods"/>

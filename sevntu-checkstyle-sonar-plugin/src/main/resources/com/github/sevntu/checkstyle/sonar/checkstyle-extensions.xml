@@ -384,11 +384,8 @@
     <description>Forbids certain methods in class.</description>
     <configKey>Checker/TreeWalker/com.github.sevntu.checkstyle.checks.coding.ForbidCertainMethodsCheck</configKey>
 
-    <param key="file" type="FILE">
-      <description>Configuration file for the forbidden methods.</description>
-    </param>
-    <param key="optional" type="BOOLEAN">
-      <description>Is the configuration file optional.</description>
+    <param key="includeConstructor" type="BOOLEAN">
+      <description>Should the constructor be part of the check.</description>
     </param>
   </rule>
 
