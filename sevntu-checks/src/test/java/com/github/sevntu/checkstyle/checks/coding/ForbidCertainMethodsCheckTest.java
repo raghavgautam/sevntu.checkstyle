@@ -27,7 +27,6 @@ import org.junit.Test;
 import com.github.sevntu.checkstyle.BaseCheckTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
-import com.puppycrawl.tools.checkstyle.api.Configuration;
 
 public class ForbidCertainMethodsCheckTest extends BaseCheckTestSupport {
 
@@ -130,6 +129,20 @@ public class ForbidCertainMethodsCheckTest extends BaseCheckTestSupport {
     }
 
     @Test(expected = CheckstyleException.class)
+    public void testNullReason() throws Exception {
+        final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
+        checkConfig.addChild(createRuleConf("ExitCheck", "exit", null, null));
+        verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), new String[]{});
+    }
+
+    @Test(expected = CheckstyleException.class)
+    public void testEmptyReason() throws Exception {
+        final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
+        checkConfig.addChild(createRuleConf("ExitCheck", "exit", null, ""));
+        verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), new String[]{});
+    }
+
+    @Test(expected = CheckstyleException.class)
     public void testWithWrongConfig() throws Exception {
         final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
         checkConfig.addAttribute("optional", "false");
@@ -137,7 +150,17 @@ public class ForbidCertainMethodsCheckTest extends BaseCheckTestSupport {
         verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), expected);
     }
 
-    private Configuration createRuleConf(String name, String methodRegex, String argRegex, String reason) {
+    @Test(expected = CheckstyleException.class)
+    public void testWithBadAttributeInConfig() throws Exception {
+        final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
+        final DefaultConfiguration rule = createRuleConf("ExitCheck", "", null, "Empty method name");
+        rule.addAttribute("badAttributed", "vaildValue");
+        checkConfig.addChild(rule);
+        final String[] expected = {};
+        verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), expected);
+    }
+
+    private DefaultConfiguration createRuleConf(String name, String methodRegex, String argRegex, String reason) {
         final DefaultConfiguration conf = new DefaultConfiguration(name);
         conf.addAttribute("methodName", methodRegex);
         if (argRegex != null) {
