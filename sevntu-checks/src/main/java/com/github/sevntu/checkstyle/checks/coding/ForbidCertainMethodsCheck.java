@@ -19,23 +19,21 @@
 
 package com.github.sevntu.checkstyle.checks.coding;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.Configuration;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-import com.puppycrawl.tools.checkstyle.utils.CommonUtils;
 
 /**
- * Check that forbidden methods are not used. We can forbid methods by name and number of
+ * Check that forbidden methods are not used. We can forbid methods by ruleName and number of
  * arguments.
  * Because of limitations of how checkstyle works we can't add checks on type of the arguments.
  * This can be used to enforce things like:
@@ -59,33 +57,84 @@ public class ForbidCertainMethodsCheck extends AbstractCheck {
     public static final String MSG_KEY_WITH_ARG = "forbid.certain.methods";
     /** Key is pointing to the warning message text in "messages.properties" file. */
     public static final String MSG_KEY_WITHOUT_ARG = "forbid.certain.methods.noarg";
+    /** Simple name of this class. */
+    private static final String CLASS_NAME = ForbidCertainMethodsCheck.class.getSimpleName();
 
-    /** Filename of forbidden methods config file. */
-    private String file;
-    /** Tells whether config file existence is optional. */
-    private boolean optional;
+    /** If we want to include constructor as part of the checks. */
+    private boolean includeConstructor;
 
     /**
      * Information about forbidden methods.
      */
-    private List<Rule> forbiddenMethods;
+    private List<Rule> rules = new ArrayList<>();
 
     /**
-     * Sets name of the config file.
-     *
-     * @param fileName name of the forbidden methods config file.
+     * Set it to include constructor as part of the check.
+     * @param includeConstructor true to include constructor false to exclude them.
      */
-    public void setFile(String fileName) {
-        file = fileName;
+    public void setIncludeConstructor(boolean includeConstructor) {
+        this.includeConstructor = includeConstructor;
     }
 
     /**
-     * Sets whether config file existence is optional.
-     *
-     * @param optional tells if config file existence is optional.
+     * Enum for allowed key for the rules.
      */
-    public void setOptional(boolean optional) {
-        this.optional = optional;
+    private enum AllowedKeyInConfig {
+        /** Key for reason argument count part the rule. */
+        METHOD_ARG_COUNT("argumentCount"),
+        /** Key for method name part of the rule. */
+        METHOD_NAME("methodName"),
+        /** Key for reason for the rule. */
+        REASON("reason");
+
+        /** Configuration key name. */
+        private String keyName;
+
+        /**
+         * Constructor for allowed key names.
+         * @param keyName allowed key name
+         */
+        AllowedKeyInConfig(String keyName) {
+            this.keyName = keyName;
+        }
+    }
+
+    /**
+     * Called by configure() for every child of this component's Configuration.
+     * <p>
+     * The default implementation throws {@link CheckstyleException} if
+     * {@code childConf} is {@code null} because it doesn't support children. It
+     * must be overridden to validate and support children that are wanted.
+     * </p>
+     *
+     * @param childConf a child of this component's Configuration
+     * @throws CheckstyleException if there is a configuration error.
+     * @see Configuration#getChildren
+     */
+
+    protected void setupChild(Configuration childConf)
+            throws CheckstyleException {
+        if (childConf != null) {
+            final String name = childConf.getName();
+            final String[] attributeNames = childConf.getAttributeNames();
+            for (String attributeName : attributeNames) {
+                if (!Arrays.stream(AllowedKeyInConfig.values()).anyMatch(
+                    item -> item.keyName.equals(attributeName))) {
+                    throw new CheckstyleException(String.format(
+                            "%s is not allowed an attribute in %s of %s",
+                            attributeName, name, ForbidCertainMethodsCheck.class.getSimpleName()));
+                }
+            }
+            String argCountRegex = null;
+            if (Arrays.stream(childConf.getAttributeNames()).anyMatch(
+                item -> item.equals(AllowedKeyInConfig.METHOD_ARG_COUNT.keyName))) {
+                argCountRegex = childConf.getAttribute(AllowedKeyInConfig.METHOD_ARG_COUNT.keyName);
+            }
+            rules.add(new Rule(name,
+                    childConf.getAttribute(AllowedKeyInConfig.METHOD_NAME.keyName),
+                    argCountRegex,
+                    childConf.getAttribute(AllowedKeyInConfig.REASON.keyName)));
+        }
     }
 
     @Override
@@ -104,44 +153,6 @@ public class ForbidCertainMethodsCheck extends AbstractCheck {
     @Override
     public int[] getRequiredTokens() {
         return getDefaultTokens();
-    }
-
-    @Override
-    protected void finishLocalSetup() throws CheckstyleException {
-        if (file != null) {
-            if (optional) {
-                if (configFileExists(file)) {
-                    forbiddenMethods = ForbidCertainMethodsLoader.loadConfigValue(file);
-                }
-                else {
-                    forbiddenMethods = new ArrayList<>();
-                }
-            }
-            else {
-                forbiddenMethods = ForbidCertainMethodsLoader.loadConfigValue(file);
-            }
-        }
-    }
-
-    /**
-     * Checks if config file with given fileName exists.
-     *
-     * @param fileName name of the config file.
-     * @return true if config file exists, otherwise false
-     */
-    private static boolean configFileExists(String fileName) {
-        boolean configFileExists;
-        try {
-            final URI uriByFilename = CommonUtils.getUriByFilename(fileName);
-            final URL url = uriByFilename.toURL();
-            try (InputStream sourceInput = url.openStream()) {
-                configFileExists = true;
-            }
-        }
-        catch (CheckstyleException | IOException ignored) {
-            configFileExists = false;
-        }
-        return configFileExists;
     }
 
     @Override
@@ -166,6 +177,9 @@ public class ForbidCertainMethodsCheck extends AbstractCheck {
             }
             // constructor
             case TokenTypes.LITERAL_NEW: {
+                if (!includeConstructor) {
+                    break;
+                }
                 final DetailAST constructor = ast.getFirstChild();
                 // case for java8 expression: File::new
                 if (constructor == null) {
@@ -189,13 +203,13 @@ public class ForbidCertainMethodsCheck extends AbstractCheck {
     /**
      * Check if the method/constructor call against defined rules.
      * @param ast ast for the call
-     * @param name name of the the method
+     * @param name ruleName of the the method
      * @param argCount number of arguments of the method
      */
     private void checkForbiddenMethod(DetailAST ast, String name, int argCount) {
         final String argCountStr = Integer.toString(argCount);
-        if (forbiddenMethods != null) {
-            final Optional<Rule> firstViolatedRule = forbiddenMethods.stream().filter(
+        if (rules != null) {
+            final Optional<Rule> firstViolatedRule = rules.stream().filter(
                 rule -> {
                     return rule.matches(name, argCountStr);
                 }).findFirst();
@@ -203,67 +217,95 @@ public class ForbidCertainMethodsCheck extends AbstractCheck {
                 final Rule violation = firstViolatedRule.get();
                 if (violation.argCountRegex != null) {
                     log(ast.getLineNo(), ast.getColumnNo(), MSG_KEY_WITH_ARG,
-                            name, violation.nameRegex,
-                            argCount, violation.argCountRegex);
+                            name, violation.methodNameRegex,
+                            argCount, violation.argCountRegex, violation.reason);
                 }
                 else {
                     log(ast.getLineNo(), ast.getColumnNo(), MSG_KEY_WITHOUT_ARG,
-                            name, violation.nameRegex);
+                            name, violation.methodNameRegex, violation.reason);
                 }
             }
         }
     }
 
     /**
-     * Class for keeping information about method calls or rules on the method calls.
+     * Class for keeping information about rules on the method calls.
      */
     static final class Rule {
-        /**
-         * Name of the method.
-         */
-        private final Pattern nameRegex;
-        /**
-         * Regex/String for number of arguments.
-         */
+        /** Name of the rule. */
+        private final String ruleName;
+        /** Name of the method. */
+        private final Pattern methodNameRegex;
+        /** Regex/String for number of arguments. */
         private final Pattern argCountRegex;
+        /** Reason for the rule. */
+        private final String reason;
 
         /**
          * Rule constructor.
-         *
-         * @param name name of the the method
-         * @param argCount number of arguments of the method
+         * @param ruleName name of the rule
+         * @param methodNameRegex regex for method name
+         * @param argCountRegex regex for argument count
+         * @param reason reason for the rule
+         * @throws CheckstyleException if regex is invalid
          */
-        private Rule(String name, String argCount) {
-            this.nameRegex = Pattern.compile(name);
-            if (argCount == null || argCount.isEmpty()) {
+        private Rule(String ruleName, String methodNameRegex, String argCountRegex, String reason)
+                throws CheckstyleException {
+            if (ruleName == null || ruleName.isEmpty()) {
+                throw new CheckstyleException(String.format(
+                        "%s is not allowed as name of rule of %s", ruleName, CLASS_NAME));
+            }
+            this.ruleName = ruleName;
+            if (methodNameRegex == null || methodNameRegex.isEmpty()) {
+                throw new CheckstyleException(String.format(
+                        "empty regex (%s) is not allowed as method name regex in %s",
+                        methodNameRegex, CLASS_NAME));
+            }
+            this.methodNameRegex = compileRegex(methodNameRegex,
+                    "Invalid regex for matching method name: " + methodNameRegex);
+            if (reason == null || reason.isEmpty()) {
+                throw new CheckstyleException(String.format(
+                        "reason(%s) is not allowed as a reason in %s", reason, CLASS_NAME));
+            }
+            this.reason = reason;
+            // only argCountRegex can be blank
+            if (argCountRegex == null || argCountRegex.isEmpty()) {
                 this.argCountRegex = null;
             }
             else {
-                this.argCountRegex = Pattern.compile(argCount);
+                this.argCountRegex = compileRegex(argCountRegex,
+                        "Invalid regex for matching argument count: " + argCountRegex);
             }
         }
 
         /**
-         * Factory method for creating Rule instance.
-         *
-         * @param methodName nameRegex of the method
-         * @param argCount   number of arguments
-         * @return instance of Rule
+         * Return compiled regex for given regex string.
+         * @param regex given regex
+         * @param error the error message to use, if regex is bad
+         * @return compiled regex
+         * @throws CheckstyleException if regex is invalid
          */
-        public static Rule of(String methodName, String argCount) {
-            return new Rule(methodName, argCount);
+        private Pattern compileRegex(String regex, String error) throws CheckstyleException {
+            try {
+                return Pattern.compile(regex);
+            }
+            catch (PatternSyntaxException ex) {
+                throw new CheckstyleException(error, ex);
+            }
         }
 
         /**
          * Check if this Rule matches the supplied rule.
          *
-         * @param name name of the the method
+         * @param name ruleName of the the method
          * @param argCount number of arguments of the method
          * @return true if rule matches
          */
         public boolean matches(String name, String argCount) {
-            return nameRegex.matcher(name).matches()
-                    && (argCountRegex == null || argCountRegex.matcher(argCount).matches());
+            final boolean methodNameMatches = methodNameRegex.matcher(name).matches();
+            final boolean argCountMatches = argCountRegex == null
+                    || argCountRegex.matcher(argCount).matches();
+            return methodNameMatches && argCountMatches;
         }
     }
 }

@@ -81,8 +81,11 @@
       <property name="forbiddenClassesRegexpPublic" value=""/>
     </module>
     <module name="com.github.sevntu.checkstyle.checks.coding.ForbidCertainMethods">
-      <property name="file" value="${checkstyle.forbidden_methods.file}"/>
-      <property name="optional" value="true"/>
+      <module name="ExitCheck">
+        <property name="argumentCount" value=""/>
+        <property name="methodName" value="exit"/>
+        <property name="reason" value="Execution of exit can shutdown the application leading to DoS attack."/>
+      </module>
     </module>
     <module name="com.github.sevntu.checkstyle.checks.coding.OverridableMethodInConstructor">
       <property name="checkCloneMethod" value="false"/>

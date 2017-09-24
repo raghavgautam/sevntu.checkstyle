@@ -27,62 +27,126 @@ import org.junit.Test;
 import com.github.sevntu.checkstyle.BaseCheckTestSupport;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.puppycrawl.tools.checkstyle.api.Configuration;
 
 public class ForbidCertainMethodsCheckTest extends BaseCheckTestSupport {
 
     @Test
-    public void testMethodCallTokenWithOptionalTrue() throws Exception {
-        testMethodCallTokenInner("true");
-    }
-
-    @Test
-    public void testMethodCallTokenWithOptionalFalse() throws Exception {
-        testMethodCallTokenInner("false");
-    }
-
-    private void testMethodCallTokenInner(String optional) throws Exception {
+    public void testMethodCallToken() throws Exception {
         final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
-        final String forbiddenMethodConfigFile = getPath("InputForbidCertainMethodsCheck.xml");
-        checkConfig.addAttribute("optional", optional);
-        checkConfig.addAttribute("file", "file://" + forbiddenMethodConfigFile);
+        checkConfig.addChild(createRuleConf("ExitCheck", "exit", null, "Execution of exit can shutdown the application leading to DoS attack."));
+        checkConfig.addChild(createRuleConf("ExitCheck2", "exit2", "", "Execution of exit2 can shutdown the application leading to DoS attack."));
+        checkConfig.addChild(createRuleConf("AssertTrue", "assert(True|False)", "1", "Assertion errors without helpful messages is not recommended."));
+        checkConfig.addChild(createRuleConf("ForbiddenConstructor", "ForbiddenConstructor", "1", "ForbiddenConstructors should not be used."));
+
         final String[] expected = {
-            "22:20: " + getCheckMessage(MSG_KEY_WITHOUT_ARG, "exit", "exit"),
-            "23:53: " + getCheckMessage(MSG_KEY_WITH_ARG, "ForbiddenConstructor", "ForbiddenConstructor", 1, "1"),
-            "30:26: " + getCheckMessage(MSG_KEY_WITH_ARG, "assertTrue", "assert(True|False)", 1, "1"),
-            "32:31: " + getCheckMessage(MSG_KEY_WITHOUT_ARG, "exit2", "exit2"),
+            "22:20: " + getCheckMessage(MSG_KEY_WITHOUT_ARG, "exit", "exit", "Execution of exit can shutdown the application leading to DoS attack."),
+            "30:26: " + getCheckMessage(MSG_KEY_WITH_ARG, "assertTrue", "assert(True|False)", 1, "1", "Assertion errors without helpful messages is not recommended."),
+            "32:31: " + getCheckMessage(MSG_KEY_WITHOUT_ARG, "exit2", "exit2", "Execution of exit2 can shutdown the application leading to DoS attack."),
         };
         verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), expected);
     }
 
     @Test
-    public void testOptionalWithNonExistingConfigOptionalTrue() throws Exception {
-        //invalid url
-        testOptionalWithNonExistingConfigInner("true", "file:\\non-existing-file.txt");
-        //non existing file
-        testOptionalWithNonExistingConfigInner("true", "file://non-existing-file.txt");
-    }
-
-    @Test(expected = CheckstyleException.class)
-    public void testOptionalWithNonExistingConfigOptionalFalse() throws Exception {
-        testOptionalWithNonExistingConfigInner("false", "file:///non-existing-file.txt");
-    }
-
-    private void testOptionalWithNonExistingConfigInner(String optional, String nonExistingFile) throws Exception {
+    public void testIncludeConstructor() throws Exception {
         final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
-        checkConfig.addAttribute("file", nonExistingFile);
-        checkConfig.addAttribute("optional", optional);
-        final String[] expected = {};
+        checkConfig.addAttribute("includeConstructor", "true");
+        checkConfig.addChild(createRuleConf("ExitCheck", "exit", null, "Execution of exit can shutdown the application leading to DoS attack."));
+        checkConfig.addChild(createRuleConf("ExitCheck2", "exit2", "", "Execution of exit2 can shutdown the application leading to DoS attack."));
+        checkConfig.addChild(createRuleConf("AssertTrue", "assert(True|False)", "1", "Assertion errors without helpful messages is not recommended."));
+        checkConfig.addChild(createRuleConf("ForbiddenConstructor", "ForbiddenConstructor", "1", "ForbiddenConstructors should not be used."));
+
+        final String[] expected = {
+            "22:20: " + getCheckMessage(MSG_KEY_WITHOUT_ARG, "exit", "exit", "Execution of exit can shutdown the application leading to DoS attack."),
+            "23:53: " + getCheckMessage(MSG_KEY_WITH_ARG, "ForbiddenConstructor", "ForbiddenConstructor", 1, "1", "ForbiddenConstructors should not be used."),
+            "30:26: " + getCheckMessage(MSG_KEY_WITH_ARG, "assertTrue", "assert(True|False)", 1, "1", "Assertion errors without helpful messages is not recommended."),
+            "32:31: " + getCheckMessage(MSG_KEY_WITHOUT_ARG, "exit2", "exit2", "Execution of exit2 can shutdown the application leading to DoS attack."),
+        };
         verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), expected);
     }
 
     @Test(expected = CheckstyleException.class)
-    public void testOptionalWithWrongConfig() throws Exception {
+    public void testBadValueOfIncludeConstructor() throws Exception {
         final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
-        final String wrongConfigFile = getPath("InputForbidCertainMethodsCheck.java");
-        checkConfig.addAttribute("file", "file://" + wrongConfigFile);
+        checkConfig.addAttribute("includeConstructor", "neitherTrueNorFalse");
+        verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), new String[]{});
+    }
+
+    @Test
+    public void testEmptyConf() throws Exception {
+        final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
+
+        verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), new String[]{});
+    }
+
+    @Test(expected = CheckstyleException.class)
+    public void testNullRuleName() throws Exception {
+        final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
+        checkConfig.addChild(createRuleConf(null, null, null,
+                "Empty rule name"));
+        verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), new String[]{});
+    }
+
+    @Test(expected = CheckstyleException.class)
+    public void testEmptyRuleName() throws Exception {
+        final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
+        checkConfig.addChild(createRuleConf("", null, null,
+                "Null name"));
+        verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), new String[]{});
+    }
+
+    @Test(expected = CheckstyleException.class)
+    public void testNullMethodNameRegex() throws Exception {
+        final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
+        checkConfig.addChild(createRuleConf("ExitCheck", null, null,
+                "Null method name"));
+        verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), new String[]{});
+    }
+
+    @Test(expected = CheckstyleException.class)
+    public void testEmptyMethodNameRegex() throws Exception {
+        final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
+        checkConfig.addChild(createRuleConf("ExitCheck", "", null,
+                "Empty method name"));
+        verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), new String[]{});
+    }
+
+    @Test(expected = CheckstyleException.class)
+    public void testBadMethodNameRegex() throws Exception {
+        final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
+        checkConfig.addChild(createRuleConf("ExitCheck", "[exit", null,
+                "Execution of exit can shutdown the application leading to DoS attack."));
+        verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), new String[]{});
+    }
+
+    @Test(expected = CheckstyleException.class)
+    public void testBadArgumentCountRegex() throws Exception {
+        final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
+        checkConfig.addChild(createRuleConf("ExitCheck", "exit", "[0",
+                "Execution of exit can shutdown the application leading to DoS attack."));
+        final String[] expected = {
+        };
+        verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), expected);
+    }
+
+    @Test(expected = CheckstyleException.class)
+    public void testWithWrongConfig() throws Exception {
+        final DefaultConfiguration checkConfig = createCheckConfig(ForbidCertainMethodsCheck.class);
         checkConfig.addAttribute("optional", "false");
         final String[] expected = {};
         verify(checkConfig, getPath("InputForbidCertainMethodsCheck.java"), expected);
+    }
+
+    private Configuration createRuleConf(String name, String methodRegex, String argRegex, String reason) {
+        final DefaultConfiguration conf = new DefaultConfiguration(name);
+        conf.addAttribute("methodName", methodRegex);
+        if (argRegex != null) {
+            conf.addAttribute("argumentCount", argRegex);
+        }
+        if (reason != null) {
+            conf.addAttribute("reason", reason);
+        }
+        return conf;
     }
 
 }
